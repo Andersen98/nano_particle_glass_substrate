@@ -8,6 +8,9 @@ gmp_ver=6.2.1
 libunistring_ver=1.1
 guile_ver=3.0.8
 
+show_help(){
+    echo "USAGE: ./install_guile.sh -b|--build BUILD_DIR -i|--install INSTALL_DIR"
+}
 die() {
     printf '%s\n' "$1" >&2
     exit 1
@@ -97,8 +100,8 @@ gmp(){
     cd "gmp-${gmp_ver}"
     ./configure --prefix="$install"
     make -j
+    make check
     make install
-    make clean
 }
 
 libunistring(){
@@ -109,7 +112,6 @@ libunistring(){
     make -j
     make check
     make install
-    make clean
 }
 
 bdwgc(){
@@ -139,7 +141,6 @@ bdwgc(){
     ./subthreadcreatetest &&\
     ./threadleaktest
     make install
-    make clean
 }
 
 guile(){
@@ -152,10 +153,10 @@ guile(){
     make -j"$max_threads" #prevents from spawning way too many threads
     make check
     make install
-    make clean
 }
 
-echo -n "Enter 1 for gmp, 2 for libunistring 3 for bdwgc 4 for guile or 5 for all"
+echo "Enter 1 for gmp, 2 for libunistring 3 for bdwgc 4 for guile 5 to build all"
+echo "Enter 6 to clean build or 6 to clean install."
 read -r target
 case $target in
     1)
@@ -173,6 +174,12 @@ case $target in
     5)
 	gmp && libunistring && bdwgc && guile
 	;;
+    6)
+    rm -rf "${build}/*"
+    ;;
+    7)
+    rm -rf "${install}/*"
+    ;;
     *)
 	die 'Error, must select something to install. Exiting.'
 	;;
