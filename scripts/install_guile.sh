@@ -33,6 +33,7 @@ get_pkg_dir(){
     tar -vxf "$pkg_file"
 }
 
+
 # Initialize all the option variables.
 # This ensures we are not contaminated by variables from the environment.
 build=
@@ -155,8 +156,16 @@ guile(){
     make install
 }
 
+clean_build(){
+    rm -rf "${build:?ERROR build not set}"
+    mkdir "$build"
+}
+clean_install(){
+    rm -rf "${install:?ERROR INSTALL NOT SET}"
+    mkdir "$install"
+}
 echo "Enter 1 for gmp, 2 for libunistring 3 for bdwgc 4 for guile 5 to build all"
-echo "Enter 6 to clean build or 6 to clean install."
+echo "Enter 6 to clean build or 7 to clean install."
 read -r target
 case $target in
     1)
@@ -175,10 +184,10 @@ case $target in
 	gmp && libunistring && bdwgc && guile
 	;;
     6)
-    rm -rf "${build}/*"
+    clean_build
     ;;
     7)
-    rm -rf "${install}/*"
+    clean_install
     ;;
     *)
 	die 'Error, must select something to install. Exiting.'
