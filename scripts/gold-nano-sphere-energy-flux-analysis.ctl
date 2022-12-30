@@ -1,5 +1,39 @@
 ;; -------------------------SETUP------------------------------------
 
+;; -------------------------RESCALE GOLD TO UM-SCALE------------------------------------
+
+
+; From Materials Library (https://github.com/NanoComp/meep/blob/master/scheme/materials.scm)
+
+; default unit length is 1 um
+(define um-scale 1.0)
+(set! um-scale (* 0.05 um-scale))
+
+; conversion factor for eV to 1/um [=1/hc]
+(define eV-um-scale (/ um-scale 1.23984193))
+
+
+;------------------------------------------------------------------
+; gold (Au)
+; fit to E.D. Palik, Handbook of Optical Constants, Academic Press, 1985
+
+(define Au-visible-frq0 (/ (* 0.0473629248511456 um-scale)))
+(define Au-visible-gam0 (/ (* 0.255476199605166 um-scale)))
+(define Au-visible-sig0 1)
+
+(define Au-visible-frq1 (/ (* 0.800619321082804 um-scale)))
+(define Au-visible-gam1 (/ (* 0.381870287531951 um-scale)))
+(define Au-visible-sig1 -169.060953137985)
+
+(define Au-visible (make medium (epsilon 0.6888)
+  (E-susceptibilities
+   (make drude-susceptibility
+     (frequency Au-visible-frq0) (gamma Au-visible-gam0) (sigma Au-visible-sig0))
+   (make lorentzian-susceptibility
+     (frequency Au-visible-frq1) (gamma Au-visible-gam1) (sigma Au-visible-sig1)))))
+
+;------------------------------------------------------------------
+
 
 ;; From principles of nano-optics, gold nano particles resonate at around 500 nm, or 0.5 um
 ;; um-scale is defined as 0.05, so unit length in meep is 50 nm.
@@ -11,14 +45,18 @@
 (define frq-max (/ wvl-min))
 (define frq-cen (* 0.5 (+ frq-min frq-max)))
 (define dfrq (- frq-max frq-min))
-
+(define nfrq 100)
 
 
 ;; try to make resolution comprable to nano particle (8 pixelels over the width of the particle)
-(set-param! resolution 8)
+(set-param! resolution 50)
 
-(define dpml (* 0.5 wvl-max))
-(define dair (* 0.5 wvl-max))
+;;turn off subpixel averaging since we are 
+;;using gold as a material
+(set! eps-averaging? false)
+
+(define dpml 4)
+(define dair 1)
 
 (define boundary-layers (list (make pml (thickness dpml))))
 (set! pml-layers boundary-layers)
@@ -47,14 +85,6 @@
                          (make flux-region (center (- r) 0 0) (size 0 (* 2 r) (* 2 r)))))
 (define box-x2 (add-flux frq-cen dfrq nfrq
                          (make flux-region (center (+ r) 0 0) (size 0 (* 2 r) (* 2 r)))))
-(define box-y1 (add-flux frq-cen dfrq nfrq
-                         (make flux-region (center 0 (- r) 0) (size (* 2 r) 0 (* 2 r)))))
-(define box-y2 (add-flux frq-cen dfrq nfrq
-                         (make flux-region (center 0 (+ r) 0) (size (* 2 r) 0 (* 2 r)))))
-(define box-z1 (add-flux frq-cen dfrq nfrq
-                         (make flux-region (center 0 0 (- r)) (size (* 2 r) (* 2 r) 0))))
-(define box-z2 (add-flux frq-cen dfrq nfrq
-                         (make flux-region (center 0 0 (+ r)) (size (* 2 r) (* 2 r) 0))))
 
 
 ;; -----------------------------MEASURE INCIDENT FLUX------------------------------
@@ -66,12 +96,15 @@
 
 (save-flux "box-x1-flux" box-x1)
 (save-flux "box-x2-flux" box-x2)
-(save-flux "box-y1-flux" box-y1)
-(save-flux "box-y2-flux" box-y2)
-(save-flux "box-z1-flux" box-z1)
-(save-flux "box-z2-flux" box-z2)
+
+;; -----------------------------RESET MEEP------------------------------
 
 (reset-meep)
+
+;; -----------------------------MEASURE TOTAL FLUX------------------------------
+
+;; try to make resolution comprable to nano particle (8 pixelels over the width of the particle)
+
 
 (set! geometry (list
                 (make sphere
@@ -93,22 +126,11 @@
                          (make flux-region (center (- r) 0 0) (size 0 (* 2 r) (* 2 r)))))
 (define box-x2 (add-flux frq-cen dfrq nfrq
                          (make flux-region (center (+ r) 0 0) (size 0 (* 2 r) (* 2 r)))))
-(define box-y1 (add-flux frq-cen dfrq nfrq
-                         (make flux-region (center 0 (- r) 0) (size (* 2 r) 0 (* 2 r)))))
-(define box-y2 (add-flux frq-cen dfrq nfrq
-                         (make flux-region (center 0 (+ r) 0) (size (* 2 r) 0 (* 2 r)))))
-(define box-z1 (add-flux frq-cen dfrq nfrq
-                         (make flux-region (center 0 0 (- r)) (size (* 2 r) (* 2 r) 0))))
-(define box-z2 (add-flux frq-cen dfrq nfrq
-                         (make flux-region (center 0 0 (+ r)) (size (* 2 r) (* 2 r) 0))))
 
 (load-minus-flux "box-x1-flux" box-x1)
 (load-minus-flux "box-x2-flux" box-x2)
-(load-minus-flux "box-y1-flux" box-y1)
-(load-minus-flux "box-y2-flux" box-y2)
-(load-minus-flux "box-z1-flux" box-z1)
-(load-minus-flux "box-z2-flux" box-z2)
+
 
 (run-sources+ 100)
 
-(display-fluxes box-x1 box-x2 box-y1 box-y2 box-z1 box-z2)
+(display-fluxes box-x1 box-x2)
